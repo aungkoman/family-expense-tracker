@@ -1,14 +1,17 @@
+
 import React, { useState, useEffect } from 'react';
-import type { Expense, Category } from '../types';
-import { parseExpenseFromText, ParsedExpense } from '../services/geminiService';
+import type { Transaction, Category } from '../types';
+import { parseExpenseFromText } from '../services/geminiService';
 import { Modal } from './ui/Modal';
 import { SparklesIcon } from './icons';
 
-interface ExpenseFormProps {
+type TransactionType = 'expense' | 'income';
+
+interface TransactionFormProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (expense: Omit<Expense, 'id' | 'createdAt' | 'updatedAt' | 'isDeleted'>) => void;
-  expense: Expense | null;
+  onSave: (transaction: Omit<Transaction, 'id' | 'createdAt' | 'updatedAt' | 'isDeleted'>, type: TransactionType) => void;
+  transaction: Transaction | null;
   categories: Category[];
 }
 
@@ -20,7 +23,8 @@ const FormField: React.FC<{label: string, children: React.ReactNode, error?: str
     </div>
 );
 
-export const ExpenseForm: React.FC<ExpenseFormProps> = ({ isOpen, onClose, onSave, expense, categories }) => {
+export const TransactionForm: React.FC<TransactionFormProps> = ({ isOpen, onClose, onSave, transaction, categories }) => {
+  const [transactionType, setTransactionType] = useState<TransactionType>('expense');
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
@@ -29,45 +33,46 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({ isOpen, onClose, onSav
   const [isParsing, setIsParsing] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string | null }>({});
 
+  const activeCategories = categories.filter(c => c.type === transactionType);
 
-  const resetForm = () => {
+  const resetForm = (type: TransactionType = 'expense') => {
+    setTransactionType(type);
     setAmount('');
     setDescription('');
     setDate(new Date().toISOString().split('T')[0]);
-    const uncategorized = categories.find(c => c.name.toLowerCase() === 'uncategorized');
-    setCategoryId(uncategorized ? uncategorized.id : (categories[0]?.id || ''));
+    const relevantCategories = categories.filter(c => c.type === type);
+    const defaultCategory = relevantCategories.find(c => c.name.toLowerCase() === (type === 'expense' ? 'uncategorized' : 'other'));
+    setCategoryId(defaultCategory ? defaultCategory.id : (relevantCategories[0]?.id || ''));
     setSmartInput('');
     setErrors({});
   };
 
   useEffect(() => {
-    if (expense) {
-      setAmount(String(expense.amount));
-      setDescription(expense.description);
-      setDate(new Date(expense.date).toISOString().split('T')[0]);
-      setCategoryId(expense.categoryId);
+    if (transaction) {
+      const type: TransactionType = 'amount' in transaction && categories.find(c => c.id === transaction.categoryId)?.type === 'expense' ? 'expense' : 'income';
+      setTransactionType(type);
+      setAmount(String(transaction.amount));
+      setDescription(transaction.description);
+      setDate(new Date(transaction.date).toISOString().split('T')[0]);
+      setCategoryId(transaction.categoryId);
       setErrors({});
     } else {
-      resetForm();
+      resetForm(transactionType);
     }
-  }, [expense, isOpen]);
+  }, [transaction, isOpen, categories]);
   
   useEffect(() => {
-    if (!expense && categories.length > 0 && !categoryId) {
-        const uncategorized = categories.find(c => c.name.toLowerCase() === 'uncategorized');
-        if (uncategorized) {
-            setCategoryId(uncategorized.id);
-        } else {
-            setCategoryId(categories[0].id);
-        }
+    if (!categoryId && activeCategories.length > 0) {
+        const defaultCategory = activeCategories.find(c => c.name.toLowerCase() === (transactionType === 'expense' ? 'uncategorized' : 'other'));
+        setCategoryId(defaultCategory ? defaultCategory.id : activeCategories[0].id);
     }
-  }, [categories, expense, categoryId]);
+  }, [categoryId, activeCategories, transactionType]);
 
   const handleSmartParse = async () => {
     if (!smartInput) return;
     setIsParsing(true);
     try {
-      const result = await parseExpenseFromText(smartInput, categories);
+      const result = await parseExpenseFromText(smartInput, categories.filter(c => c.type === 'expense'));
       if (result) {
         setDescription(result.description);
         setAmount(String(result.amount));
@@ -89,118 +94,74 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({ isOpen, onClose, onSav
 
   const validate = () => {
     const newErrors: { [key: string]: string | null } = {};
-    if (!description.trim()) {
-      newErrors.description = 'Description is required.';
-    }
-    if (!amount || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) {
-      newErrors.amount = 'Please enter a valid positive amount.';
-    }
-    if (!date) {
-      newErrors.date = 'Date is required.';
-    }
-    if (!categoryId) {
-      newErrors.categoryId = 'Please select a category.';
-    }
+    if (!description.trim()) newErrors.description = 'Description is required.';
+    if (!amount || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) newErrors.amount = 'Please enter a valid positive amount.';
+    if (!date) newErrors.date = 'Date is required.';
+    if (!categoryId) newErrors.categoryId = 'Please select a category.';
     setErrors(newErrors);
     return Object.values(newErrors).every(error => error === null);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validate()) {
-      return;
-    }
-    onSave({
-      amount: parseFloat(amount),
-      description,
-      date,
-      categoryId,
-    });
-    resetForm();
+    if (!validate()) return;
+    onSave({ amount: parseFloat(amount), description, date, categoryId }, transactionType);
+    resetForm(transactionType);
   };
+  
+  const handleTypeChange = (type: TransactionType) => {
+      setTransactionType(type);
+      const relevantCategories = categories.filter(c => c.type === type);
+      const defaultCategory = relevantCategories.find(c => c.name.toLowerCase() === (type === 'expense' ? 'uncategorized' : 'other'));
+      setCategoryId(defaultCategory ? defaultCategory.id : relevantCategories[0]?.id || '');
+  }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={expense ? 'Edit Expense' : 'Add Expense'}>
+    <Modal isOpen={isOpen} onClose={onClose} title={transaction ? 'Edit Transaction' : 'Add Transaction'}>
       <form onSubmit={handleSubmit} noValidate>
         <div className="p-6 space-y-4">
-            <div className="p-4 border border-primary-200 dark:border-primary-800 bg-primary-50 dark:bg-primary-900/20 rounded-lg">
-                <label className="block text-sm font-bold text-primary-800 dark:text-primary-200 mb-2">Smart Add with AI</label>
-                <div className="flex space-x-2">
-                    <input
-                        type="text"
-                        value={smartInput}
-                        onChange={e => setSmartInput(e.target.value)}
-                        placeholder="e.g., Coffee at Starbucks for 5.50"
-                        className="flex-grow bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                    />
-                    <button
-                        type="button"
-                        onClick={handleSmartParse}
-                        disabled={isParsing}
-                        className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50"
-                    >
-                        {isParsing ? '...' : <SparklesIcon />}
-                        <span className="ml-2">Parse</span>
-                    </button>
-                </div>
-                 <p className="text-xs text-primary-600 dark:text-primary-400 mt-2">Let AI fill out the form for you!</p>
-            </div>
+            {!transaction && (
+              <div className="flex justify-center bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
+                  <button type="button" onClick={() => handleTypeChange('expense')} className={`w-1/2 py-2 rounded-md font-semibold transition-colors ${transactionType === 'expense' ? 'bg-white dark:bg-gray-800 shadow text-primary-600' : 'text-gray-600 dark:text-gray-300'}`}>Expense</button>
+                  <button type="button" onClick={() => handleTypeChange('income')} className={`w-1/2 py-2 rounded-md font-semibold transition-colors ${transactionType === 'income' ? 'bg-white dark:bg-gray-800 shadow text-primary-600' : 'text-gray-600 dark:text-gray-300'}`}>Income</button>
+              </div>
+            )}
+            
+            {transactionType === 'expense' && (
+              <div className="p-4 border border-primary-200 dark:border-primary-800 bg-primary-50 dark:bg-primary-900/20 rounded-lg">
+                  <label className="block text-sm font-bold text-primary-800 dark:text-primary-200 mb-2">Smart Add with AI</label>
+                  <div className="flex space-x-2">
+                      <input type="text" value={smartInput} onChange={e => setSmartInput(e.target.value)} placeholder="e.g., Coffee at Starbucks for 5.50" className="flex-grow bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500"/>
+                      <button type="button" onClick={handleSmartParse} disabled={isParsing} className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50">
+                          {isParsing ? '...' : <SparklesIcon />} <span className="ml-2">Parse</span>
+                      </button>
+                  </div>
+                   <p className="text-xs text-primary-600 dark:text-primary-400 mt-2">Let AI fill out the form for you!</p>
+              </div>
+            )}
 
           <FormField label="Description" error={errors.description}>
-            <input
-              type="text"
-              value={description}
-              onChange={e => setDescription(e.target.value)}
-              className={`w-full bg-white dark:bg-gray-700 border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 ${errors.description ? 'border-red-500' : 'border-gray-300 dark:border-gray-600 focus:border-primary-500'}`}
-            />
+            <input type="text" value={description} onChange={e => setDescription(e.target.value)} className={`w-full bg-white dark:bg-gray-700 border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 ${errors.description ? 'border-red-500' : 'border-gray-300 dark:border-gray-600 focus:border-primary-500'}`}/>
           </FormField>
           
           <div className="grid grid-cols-2 gap-4">
               <FormField label="Amount ($)" error={errors.amount}>
-                <input
-                  type="number"
-                  value={amount}
-                  onChange={e => setAmount(e.target.value)}
-                  className={`w-full bg-white dark:bg-gray-700 border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 ${errors.amount ? 'border-red-500' : 'border-gray-300 dark:border-gray-600 focus:border-primary-500'}`}
-                  step="0.01"
-                />
+                <input type="number" value={amount} onChange={e => setAmount(e.target.value)} className={`w-full bg-white dark:bg-gray-700 border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 ${errors.amount ? 'border-red-500' : 'border-gray-300 dark:border-gray-600 focus:border-primary-500'}`} step="0.01"/>
               </FormField>
               <FormField label="Date" error={errors.date}>
-                <input
-                  type="date"
-                  value={date}
-                  onChange={e => setDate(e.target.value)}
-                  className={`w-full bg-white dark:bg-gray-700 border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 ${errors.date ? 'border-red-500' : 'border-gray-300 dark:border-gray-600 focus:border-primary-500'}`}
-                />
+                <input type="date" value={date} onChange={e => setDate(e.target.value)} className={`w-full bg-white dark:bg-gray-700 border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 ${errors.date ? 'border-red-500' : 'border-gray-300 dark:border-gray-600 focus:border-primary-500'}`}/>
               </FormField>
           </div>
           
           <FormField label="Category" error={errors.categoryId}>
-            <select
-              value={categoryId}
-              onChange={e => setCategoryId(e.target.value)}
-              className={`w-full bg-white dark:bg-gray-700 border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 ${errors.categoryId ? 'border-red-500' : 'border-gray-300 dark:border-gray-600 focus:border-primary-500'}`}
-            >
-              {categories.map(cat => (
-                <option key={cat.id} value={cat.id}>{cat.icon} {cat.name}</option>
-              ))}
+            <select value={categoryId} onChange={e => setCategoryId(e.target.value)} className={`w-full bg-white dark:bg-gray-700 border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 ${errors.categoryId ? 'border-red-500' : 'border-gray-300 dark:border-gray-600 focus:border-primary-500'}`}>
+              {activeCategories.map(cat => ( <option key={cat.id} value={cat.id}>{cat.icon} {cat.name}</option>))}
             </select>
           </FormField>
         </div>
         <div className="bg-gray-50 dark:bg-gray-700 px-6 py-3 flex justify-end space-x-3">
-          <button
-            type="button"
-            onClick={onClose}
-            className="py-2 px-4 bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200 font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            className="py-2 px-4 bg-primary-600 text-white font-semibold rounded-lg hover:bg-primary-700"
-          >
-            Save
-          </button>
+          <button type="button" onClick={onClose} className="py-2 px-4 bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200 font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500">Cancel</button>
+          <button type="submit" className="py-2 px-4 bg-primary-600 text-white font-semibold rounded-lg hover:bg-primary-700">Save</button>
         </div>
       </form>
     </Modal>

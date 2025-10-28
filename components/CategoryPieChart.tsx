@@ -29,7 +29,9 @@ export const CategoryPieChart: React.FC<CategoryPieChartProps> = ({ expenses, ca
   // FIX: Explicitly type the Map to ensure `get` returns a typed value (`Category | undefined`) instead of `unknown`, which resolves all downstream type inference errors.
   const categoryMap = new Map<string, Category>(categories.map(c => [c.id, c]));
 
-  // FIX: By typing the initial value of the reduce accumulator, TypeScript can correctly infer the types of `data` and `chartData`, resolving downstream errors. This avoids using a generic on `.reduce()` which can cause issues with some TypeScript configurations.
+  // FIX: Cast the initial value of reduce to `Record<string, ChartDataItem>` to correctly type
+  // the accumulator `acc` and the resulting `data` object. This resolves downstream type
+  // errors when accessing properties on chart data.
   const data = expenses.reduce((acc, expense) => {
     const category = categoryMap.get(expense.categoryId);
     const categoryName = category?.name || 'Uncategorized';

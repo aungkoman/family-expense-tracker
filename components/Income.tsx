@@ -1,45 +1,38 @@
 
 import React, { useState, useMemo } from 'react';
-import type { Expense, Category } from '../types';
+import type { Income, Category } from '../types';
 import { EditIcon, DeleteIcon } from './icons';
 
-interface TransactionsProps {
-  expenses: Expense[];
+interface IncomeProps {
+  incomes: Income[];
   categories: Category[];
-  onEdit: (expense: Expense) => void;
+  onEdit: (income: Income) => void;
   onDelete: (id: string) => void;
 }
 
-const Transactions: React.FC<TransactionsProps> = ({ expenses, categories, onEdit, onDelete }) => {
+const IncomeList: React.FC<IncomeProps> = ({ incomes, categories, onEdit, onDelete }) => {
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
-  const expenseCategories = useMemo(() => categories.filter(c => c.type === 'expense'), [categories]);
-  const categoryMap = useMemo(() => new Map(categories.map(c => [c.id, c])), [categories]);
+  const incomeCategories = useMemo(() => categories.filter(c => c.type === 'income'), [categories]);
+  const categoryMap = useMemo(() => new Map(incomeCategories.map(c => [c.id, c])), [incomeCategories]);
 
-  const filteredExpenses = useMemo(() => {
-    return expenses
-      .filter(expense => {
-        // Category filter
-        if (filterCategory !== 'all' && expense.categoryId !== filterCategory) {
+  const filteredIncomes = useMemo(() => {
+    return incomes
+      .filter(income => {
+        if (filterCategory !== 'all' && income.categoryId !== filterCategory) {
           return false;
         }
-
-        // Date filter logic
         if (startDate && !endDate) {
-          // User selected only a start date, so we filter for that single day.
-          return expense.date === startDate;
+          return income.date === startDate;
         }
-        
-        // For a date range, or just an end date
-        const startMatch = !startDate || expense.date >= startDate;
-        const endMatch = !endDate || expense.date <= endDate;
-
+        const startMatch = !startDate || income.date >= startDate;
+        const endMatch = !endDate || income.date <= endDate;
         return startMatch && endMatch;
       })
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [expenses, filterCategory, startDate, endDate]);
+  }, [incomes, filterCategory, startDate, endDate]);
 
   const resetFilters = () => {
     setFilterCategory('all');
@@ -49,7 +42,7 @@ const Transactions: React.FC<TransactionsProps> = ({ expenses, categories, onEdi
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-gray-800 dark:text-white">Expenses</h1>
+      <h1 className="text-3xl font-bold text-gray-800 dark:text-white">Income</h1>
       
       <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-md">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
@@ -62,7 +55,7 @@ const Transactions: React.FC<TransactionsProps> = ({ expenses, categories, onEdi
               className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md bg-white dark:bg-gray-700"
             >
               <option value="all">All Categories</option>
-              {expenseCategories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
+              {incomeCategories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
             </select>
           </div>
           <div>
@@ -106,33 +99,33 @@ const Transactions: React.FC<TransactionsProps> = ({ expenses, categories, onEdi
             </tr>
           </thead>
           <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-            {filteredExpenses.map(expense => {
-              const category = categoryMap.get(expense.categoryId);
+            {filteredIncomes.map(income => {
+              const category = categoryMap.get(income.categoryId);
               return (
-                <tr key={expense.id}>
+                <tr key={income.id}>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900 dark:text-white">{expense.description}</div>
+                    <div className="text-sm font-medium text-gray-900 dark:text-white">{income.description}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full" style={{backgroundColor: category?.color + '20', color: category?.color}}>
                       {category?.icon} {category?.name || 'Uncategorized'}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{new Date(expense.date).toLocaleDateString()}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900 dark:text-white">${expense.amount.toFixed(2)}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{new Date(income.date).toLocaleDateString()}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-green-600 dark:text-green-400">+${income.amount.toFixed(2)}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button onClick={() => onEdit(expense)} className="text-primary-600 hover:text-primary-900 dark:text-primary-400 dark:hover:text-primary-200 mr-4"><EditIcon /></button>
-                    <button onClick={() => onDelete(expense.id)} className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-200"><DeleteIcon /></button>
+                    <button onClick={() => onEdit(income)} className="text-primary-600 hover:text-primary-900 dark:text-primary-400 dark:hover:text-primary-200 mr-4"><EditIcon /></button>
+                    <button onClick={() => onDelete(income.id)} className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-200"><DeleteIcon /></button>
                   </td>
                 </tr>
               );
             })}
           </tbody>
         </table>
-        {filteredExpenses.length === 0 && <p className="text-center py-8 text-gray-500 dark:text-gray-400">No transactions match your filters.</p>}
+        {filteredIncomes.length === 0 && <p className="text-center py-8 text-gray-500 dark:text-gray-400">No income records match your filters.</p>}
       </div>
     </div>
   );
 };
 
-export default Transactions;
+export default IncomeList;

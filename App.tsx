@@ -3,12 +3,13 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useDataStore } from './hooks/useDataStore';
 import Dashboard from './components/Dashboard';
 import Transactions from './components/Transactions';
+import IncomeList from './components/Income';
 import Categories from './components/Categories';
-import { ExpenseForm } from './components/ExpenseForm';
-import type { Expense, Category } from './types';
-import { AddIcon, CategoriesIcon, DashboardIcon, TransactionsIcon, MoonIcon, SunIcon } from './components/icons';
+import { TransactionForm } from './components/ExpenseForm';
+import type { Expense, Income, Category, Transaction } from './types';
+import { AddIcon, CategoriesIcon, DashboardIcon, TransactionsIcon, MoonIcon, SunIcon, IncomeIcon } from './components/icons';
 
-type View = 'dashboard' | 'transactions' | 'categories';
+type View = 'dashboard' | 'transactions' | 'income' | 'categories';
 
 const NavItem: React.FC<{ currentView: View; viewName: View; label: string; icon: React.ReactNode; onClick: (view: View) => void }> = ({ currentView, viewName, label, icon, onClick }) => (
     <li
@@ -24,17 +25,21 @@ const NavItem: React.FC<{ currentView: View; viewName: View; label: string; icon
 
 const App: React.FC = () => {
   const [view, setView] = useState<View>('dashboard');
-  const [isExpenseModalOpen, setExpenseModalOpen] = useState(false);
-  const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+  const [isTransactionModalOpen, setTransactionModalOpen] = useState(false);
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [isDarkMode, setIsDarkMode] = useState(false);
 
   const {
     expenses,
+    incomes,
     categories,
     addExpense,
     updateExpense,
     deleteExpense,
+    addIncome,
+    updateIncome,
+    deleteIncome,
     addCategory,
     updateCategory,
     deleteCategory,
@@ -73,36 +78,49 @@ const App: React.FC = () => {
     setIsDarkMode(!isDarkMode);
   };
 
-  const openAddExpenseModal = () => {
-    setEditingExpense(null);
-    setExpenseModalOpen(true);
+  const openAddTransactionModal = () => {
+    setEditingTransaction(null);
+    setTransactionModalOpen(true);
   };
 
-  const openEditExpenseModal = (expense: Expense) => {
-    setEditingExpense(expense);
-    setExpenseModalOpen(true);
+  const openEditTransactionModal = (transaction: Transaction) => {
+    setEditingTransaction(transaction);
+    setTransactionModalOpen(true);
   };
 
-  const handleExpenseFormSave = (expense: Omit<Expense, 'id' | 'createdAt' | 'updatedAt' | 'isDeleted'>) => {
-    if (editingExpense) {
-      updateExpense(editingExpense.id, expense);
+  const handleTransactionFormSave = (
+    transaction: Omit<Expense, 'id' | 'createdAt' | 'updatedAt' | 'isDeleted'>,
+    type: 'expense' | 'income'
+  ) => {
+    if (editingTransaction) {
+        if ('amount' in editingTransaction && type === 'expense') {
+            updateExpense(editingTransaction.id, transaction);
+        } else {
+            updateIncome(editingTransaction.id, transaction);
+        }
     } else {
-      addExpense(expense);
+        if (type === 'expense') {
+            addExpense(transaction);
+        } else {
+            addIncome(transaction);
+        }
     }
-    setExpenseModalOpen(false);
-    setEditingExpense(null);
+    setTransactionModalOpen(false);
+    setEditingTransaction(null);
   };
 
   const renderView = () => {
     switch (view) {
       case 'dashboard':
-        return <Dashboard expenses={expenses} categories={categories} onEditExpense={openEditExpenseModal} />;
+        return <Dashboard expenses={expenses} incomes={incomes} categories={categories} onEditTransaction={openEditTransactionModal} />;
       case 'transactions':
-        return <Transactions expenses={expenses} categories={categories} onEdit={openEditExpenseModal} onDelete={deleteExpense} />;
+        return <Transactions expenses={expenses} categories={categories} onEdit={openEditTransactionModal} onDelete={deleteExpense} />;
+      case 'income':
+        return <IncomeList incomes={incomes} categories={categories} onEdit={openEditTransactionModal} onDelete={deleteIncome} />;
       case 'categories':
         return <Categories categories={categories} addCategory={addCategory} updateCategory={updateCategory} deleteCategory={deleteCategory} />;
       default:
-        return <Dashboard expenses={expenses} categories={categories} onEditExpense={openEditExpenseModal} />;
+        return <Dashboard expenses={expenses} incomes={incomes} categories={categories} onEditTransaction={openEditTransactionModal} />;
     }
   };
 
@@ -126,7 +144,8 @@ const App: React.FC = () => {
           </div>
           <ul>
             <NavItem currentView={view} viewName="dashboard" label="Dashboard" icon={<DashboardIcon />} onClick={setView} />
-            <NavItem currentView={view} viewName="transactions" label="Transactions" icon={<TransactionsIcon />} onClick={setView} />
+            <NavItem currentView={view} viewName="transactions" label="Expenses" icon={<TransactionsIcon />} onClick={setView} />
+            <NavItem currentView={view} viewName="income" label="Income" icon={<IncomeIcon />} onClick={setView} />
             <NavItem currentView={view} viewName="categories" label="Categories" icon={<CategoriesIcon />} onClick={setView} />
           </ul>
         </div>
@@ -145,19 +164,19 @@ const App: React.FC = () => {
       </main>
 
       <button
-        onClick={openAddExpenseModal}
+        onClick={openAddTransactionModal}
         className="fixed bottom-8 right-8 bg-primary-600 hover:bg-primary-700 text-white rounded-full p-4 shadow-lg transition-transform transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-        aria-label="Add Expense"
+        aria-label="Add Transaction"
       >
         <AddIcon />
       </button>
 
-      {isExpenseModalOpen && (
-        <ExpenseForm
-          isOpen={isExpenseModalOpen}
-          onClose={() => setExpenseModalOpen(false)}
-          onSave={handleExpenseFormSave}
-          expense={editingExpense}
+      {isTransactionModalOpen && (
+        <TransactionForm
+          isOpen={isTransactionModalOpen}
+          onClose={() => setTransactionModalOpen(false)}
+          onSave={handleTransactionFormSave}
+          transaction={editingTransaction}
           categories={categories}
         />
       )}

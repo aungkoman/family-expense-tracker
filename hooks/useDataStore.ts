@@ -1,12 +1,13 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import type { Expense, Category, DataStore } from '../types';
-import { DEFAULT_CATEGORIES } from '../constants';
+import type { Expense, Income, Category, DataStore } from '../types';
+import { DEFAULT_CATEGORIES, DEFAULT_INCOME_CATEGORIES } from '../constants';
 
 const LOCAL_STORAGE_KEY = 'expense-tracker-data';
 
 export const useDataStore = () => {
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [incomes, setIncomes] = useState<Income[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -16,6 +17,7 @@ export const useDataStore = () => {
       if (storedData) {
         const data: DataStore = JSON.parse(storedData);
         setExpenses(data.expenses || []);
+        setIncomes(data.incomes || []);
         if (data.categories && data.categories.length > 0) {
             setCategories(data.categories);
         } else {
@@ -42,7 +44,8 @@ export const useDataStore = () => {
 
   const seedDefaultCategories = () => {
     const now = new Date().toISOString();
-    const newCategories = DEFAULT_CATEGORIES.map(cat => ({
+    const allDefaultCategories = [...DEFAULT_CATEGORIES, ...DEFAULT_INCOME_CATEGORIES];
+    const newCategories = allDefaultCategories.map(cat => ({
       ...cat,
       id: crypto.randomUUID(),
       createdAt: now,
@@ -50,14 +53,14 @@ export const useDataStore = () => {
       isDeleted: false,
     }));
     setCategories(newCategories);
-    saveData({ expenses: [], categories: newCategories });
+    saveData({ expenses: [], incomes: [], categories: newCategories });
   };
   
   useEffect(() => {
     if(!loading) {
-      saveData({ expenses, categories });
+      saveData({ expenses, incomes, categories });
     }
-  }, [expenses, categories, saveData, loading]);
+  }, [expenses, incomes, categories, saveData, loading]);
 
 
   const addExpense = (expense: Omit<Expense, 'id' | 'createdAt' | 'updatedAt' | 'isDeleted'>) => {
@@ -86,6 +89,36 @@ export const useDataStore = () => {
     setExpenses(prev =>
       prev.map(exp =>
         exp.id === id ? { ...exp, isDeleted: true, updatedAt: now } : exp
+      )
+    );
+  };
+
+  const addIncome = (income: Omit<Income, 'id' | 'createdAt' | 'updatedAt' | 'isDeleted'>) => {
+    const now = new Date().toISOString();
+    const newIncome: Income = {
+      ...income,
+      id: crypto.randomUUID(),
+      createdAt: now,
+      updatedAt: now,
+      isDeleted: false,
+    };
+    setIncomes(prev => [...prev, newIncome]);
+  };
+
+  const updateIncome = (id: string, updates: Partial<Omit<Income, 'id' | 'createdAt' | 'updatedAt' | 'isDeleted'>>) => {
+    const now = new Date().toISOString();
+    setIncomes(prev =>
+      prev.map(inc =>
+        inc.id === id ? { ...inc, ...updates, updatedAt: now } : inc
+      )
+    );
+  };
+
+  const deleteIncome = (id: string) => {
+    const now = new Date().toISOString();
+    setIncomes(prev =>
+      prev.map(inc =>
+        inc.id === id ? { ...inc, isDeleted: true, updatedAt: now } : inc
       )
     );
   };
@@ -127,14 +160,19 @@ export const useDataStore = () => {
   };
 
   const visibleExpenses = expenses.filter(e => !e.isDeleted);
+  const visibleIncomes = incomes.filter(i => !i.isDeleted);
   const visibleCategories = categories.filter(c => !c.isDeleted);
   
   return {
     expenses: visibleExpenses,
+    incomes: visibleIncomes,
     categories: visibleCategories,
     addExpense,
     updateExpense,
     deleteExpense,
+    addIncome,
+    updateIncome,
+    deleteIncome,
     addCategory,
     updateCategory,
     deleteCategory,

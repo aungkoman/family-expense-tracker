@@ -21,12 +21,14 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({ isOpen, onClose, onS
   const [name, setName] = useState('');
   const [icon, setIcon] = useState('');
   const [color, setColor] = useState('#4CAF50');
+  const [type, setType] = useState<'expense' | 'income'>('expense');
 
   useEffect(() => {
     if (category) {
       setName(category.name);
       setIcon(category.icon);
       setColor(category.color);
+      setType(category.type);
     } else {
       resetForm();
     }
@@ -36,6 +38,7 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({ isOpen, onClose, onS
     setName('');
     setIcon('❓');
     setColor('#4CAF50');
+    setType('expense');
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -48,6 +51,7 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({ isOpen, onClose, onS
       name,
       icon,
       color,
+      type,
       isDefault: category?.isDefault || false,
     });
     resetForm();
@@ -57,6 +61,20 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({ isOpen, onClose, onS
     <Modal isOpen={isOpen} onClose={onClose} title={category ? 'Edit Category' : 'Add Category'}>
       <form onSubmit={handleSubmit}>
         <div className="p-6 space-y-4">
+            <FormField label="Category Type">
+                <div className="flex space-x-4 p-1 bg-gray-100 dark:bg-gray-900 rounded-lg">
+                   <label className={`w-1/2 text-center py-2 rounded-md cursor-pointer transition-colors ${type === 'expense' ? 'bg-white dark:bg-gray-700 shadow font-semibold' : 'text-gray-600 dark:text-gray-400'}`}>
+                        <input type="radio" value="expense" checked={type === 'expense'} onChange={() => setType('expense')} disabled={!!category} className="sr-only" />
+                        <span>Expense</span>
+                    </label>
+                    <label className={`w-1/2 text-center py-2 rounded-md cursor-pointer transition-colors ${type === 'income' ? 'bg-white dark:bg-gray-700 shadow font-semibold' : 'text-gray-600 dark:text-gray-400'}`}>
+                        <input type="radio" value="income" checked={type === 'income'} onChange={() => setType('income')} disabled={!!category} className="sr-only"/>
+                        <span>Income</span>
+                    </label>
+                </div>
+                {!!category && <p className="text-xs text-gray-400 mt-1">Type cannot be changed for existing categories.</p>}
+            </FormField>
+
           <FormField label="Category Name">
             <input
               type="text"
