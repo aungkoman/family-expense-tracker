@@ -13,6 +13,13 @@ interface ExpenseFormProps {
   categories: Category[];
 }
 
+const FormField: React.FC<{label: string, children: React.ReactNode}> = ({label, children}) => (
+    <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">{label}</label>
+        <div className="mt-1">{children}</div>
+    </div>
+);
+
 export const ExpenseForm: React.FC<ExpenseFormProps> = ({ isOpen, onClose, onSave, expense, categories }) => {
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
@@ -90,13 +97,6 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({ isOpen, onClose, onSav
     });
     resetForm();
   };
-  
-  const FormField: React.FC<{label: string, children: React.ReactNode}> = ({label, children}) => (
-    <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">{label}</label>
-        <div className="mt-1">{children}</div>
-    </div>
-  );
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={expense ? 'Edit Expense' : 'Add Expense'}>

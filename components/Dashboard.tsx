@@ -1,3 +1,4 @@
+
 import React from 'react';
 import type { Expense, Category } from '../types';
 import { CategoryPieChart } from './CategoryPieChart';
@@ -8,6 +9,14 @@ interface DashboardProps {
   categories: Category[];
   onEditExpense: (expense: Expense) => void;
 }
+
+const Card: React.FC<{title: string, amount: number, period: string}> = ({title, amount, period}) => (
+    <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md">
+      <h3 className="text-lg font-semibold text-gray-500 dark:text-gray-400">{title}</h3>
+      <p className="text-3xl font-bold text-gray-800 dark:text-white mt-2">${amount.toFixed(2)}</p>
+      <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">{period}</p>
+    </div>
+);
 
 const Dashboard: React.FC<DashboardProps> = ({ expenses, categories, onEditExpense }) => {
   const today = new Date();
@@ -24,14 +33,6 @@ const Dashboard: React.FC<DashboardProps> = ({ expenses, categories, onEditExpen
 
   // FIX: Explicitly type the Map to ensure `get` returns a typed value (`Category | undefined`) instead of `unknown`.
   const categoryMap = new Map<string, Category>(categories.map(c => [c.id, c]));
-
-  const Card: React.FC<{title: string, amount: number, period: string}> = ({title, amount, period}) => (
-    <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md">
-      <h3 className="text-lg font-semibold text-gray-500 dark:text-gray-400">{title}</h3>
-      <p className="text-3xl font-bold text-gray-800 dark:text-white mt-2">${amount.toFixed(2)}</p>
-      <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">{period}</p>
-    </div>
-  );
 
   return (
     <div className="space-y-6">

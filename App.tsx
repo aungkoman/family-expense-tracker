@@ -10,6 +10,18 @@ import { AddIcon, CategoriesIcon, DashboardIcon, TransactionsIcon, MoonIcon, Sun
 
 type View = 'dashboard' | 'transactions' | 'categories';
 
+const NavItem: React.FC<{ currentView: View; viewName: View; label: string; icon: React.ReactNode; onClick: (view: View) => void }> = ({ currentView, viewName, label, icon, onClick }) => (
+    <li
+      className={`flex items-center p-3 my-1 rounded-lg cursor-pointer transition-colors ${
+        currentView === viewName ? 'bg-primary-500 text-white' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+      }`}
+      onClick={() => onClick(viewName)}
+    >
+      {icon}
+      <span className="ml-3 font-medium">{label}</span>
+    </li>
+);
+
 const App: React.FC = () => {
   const [view, setView] = useState<View>('dashboard');
   const [isExpenseModalOpen, setExpenseModalOpen] = useState(false);
@@ -101,18 +113,6 @@ const App: React.FC = () => {
       </div>
     );
   }
-
-  const NavItem: React.FC<{ currentView: View; viewName: View; label: string; icon: React.ReactNode; onClick: (view: View) => void }> = ({ currentView, viewName, label, icon, onClick }) => (
-    <li
-      className={`flex items-center p-3 my-1 rounded-lg cursor-pointer transition-colors ${
-        currentView === viewName ? 'bg-primary-500 text-white' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-      }`}
-      onClick={() => onClick(viewName)}
-    >
-      {icon}
-      <span className="ml-3 font-medium">{label}</span>
-    </li>
-  );
 
   return (
     <div className="flex h-screen bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200">

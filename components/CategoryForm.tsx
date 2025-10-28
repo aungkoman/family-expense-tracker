@@ -10,6 +10,13 @@ interface CategoryFormProps {
   category: Category | null;
 }
 
+const FormField: React.FC<{label: string, children: React.ReactNode}> = ({label, children}) => (
+    <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">{label}</label>
+        <div className="mt-1">{children}</div>
+    </div>
+);
+
 export const CategoryForm: React.FC<CategoryFormProps> = ({ isOpen, onClose, onSave, category }) => {
   const [name, setName] = useState('');
   const [icon, setIcon] = useState('');
@@ -45,13 +52,6 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({ isOpen, onClose, onS
     });
     resetForm();
   };
-  
-  const FormField: React.FC<{label: string, children: React.ReactNode}> = ({label, children}) => (
-    <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">{label}</label>
-        <div className="mt-1">{children}</div>
-    </div>
-  );
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={category ? 'Edit Category' : 'Add Category'}>
