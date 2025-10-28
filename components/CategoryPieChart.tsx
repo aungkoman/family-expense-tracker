@@ -7,6 +7,13 @@ interface CategoryPieChartProps {
   categories: Category[];
 }
 
+// Add a type for the data structure used by the chart
+interface ChartDataItem {
+  name: string;
+  value: number;
+  fill: string;
+}
+
 const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       return (
@@ -22,8 +29,8 @@ export const CategoryPieChart: React.FC<CategoryPieChartProps> = ({ expenses, ca
   // FIX: Explicitly type the Map to ensure `get` returns a typed value (`Category | undefined`) instead of `unknown`, which resolves all downstream type inference errors.
   const categoryMap = new Map<string, Category>(categories.map(c => [c.id, c]));
 
-  // FIX: Provide a generic type argument to `reduce` to ensure `data` and `chartData` are correctly typed.
-  const data = expenses.reduce<{[key: string]: { name: string; value: number; fill: string }}>((acc, expense) => {
+  // FIX: By typing the initial value of the reduce accumulator, TypeScript can correctly infer the types of `data` and `chartData`, resolving downstream errors. This avoids using a generic on `.reduce()` which can cause issues with some TypeScript configurations.
+  const data = expenses.reduce((acc, expense) => {
     const category = categoryMap.get(expense.categoryId);
     const categoryName = category?.name || 'Uncategorized';
     
@@ -36,7 +43,7 @@ export const CategoryPieChart: React.FC<CategoryPieChartProps> = ({ expenses, ca
     }
     acc[categoryName].value += expense.amount;
     return acc;
-  }, {});
+  }, {} as Record<string, ChartDataItem>);
 
   const chartData = Object.values(data).sort((a,b) => b.value - a.value);
 

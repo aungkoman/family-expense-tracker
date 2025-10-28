@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import type { Expense, Category } from '../types';
 import { parseExpenseFromText, ParsedExpense } from '../services/geminiService';
@@ -13,10 +12,11 @@ interface ExpenseFormProps {
   categories: Category[];
 }
 
-const FormField: React.FC<{label: string, children: React.ReactNode}> = ({label, children}) => (
+const FormField: React.FC<{label: string, children: React.ReactNode, error?: string | null}> = ({label, children, error}) => (
     <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">{label}</label>
         <div className="mt-1">{children}</div>
+        {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
     </div>
 );
 
@@ -27,6 +27,18 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({ isOpen, onClose, onSav
   const [categoryId, setCategoryId] = useState('');
   const [smartInput, setSmartInput] = useState('');
   const [isParsing, setIsParsing] = useState(false);
+  const [errors, setErrors] = useState<{ [key: string]: string | null }>({});
+
+
+  const resetForm = () => {
+    setAmount('');
+    setDescription('');
+    setDate(new Date().toISOString().split('T')[0]);
+    const uncategorized = categories.find(c => c.name.toLowerCase() === 'uncategorized');
+    setCategoryId(uncategorized ? uncategorized.id : (categories[0]?.id || ''));
+    setSmartInput('');
+    setErrors({});
+  };
 
   useEffect(() => {
     if (expense) {
@@ -34,6 +46,7 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({ isOpen, onClose, onSav
       setDescription(expense.description);
       setDate(new Date(expense.date).toISOString().split('T')[0]);
       setCategoryId(expense.categoryId);
+      setErrors({});
     } else {
       resetForm();
     }
@@ -50,16 +63,6 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({ isOpen, onClose, onSav
     }
   }, [categories, expense, categoryId]);
 
-
-  const resetForm = () => {
-    setAmount('');
-    setDescription('');
-    setDate(new Date().toISOString().split('T')[0]);
-    const uncategorized = categories.find(c => c.name.toLowerCase() === 'uncategorized');
-    setCategoryId(uncategorized ? uncategorized.id : (categories[0]?.id || ''));
-    setSmartInput('');
-  };
-
   const handleSmartParse = async () => {
     if (!smartInput) return;
     setIsParsing(true);
@@ -72,6 +75,7 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({ isOpen, onClose, onSav
         if (suggestedCategory) {
           setCategoryId(suggestedCategory.id);
         }
+        setErrors({}); // Clear errors after successful parse
       } else {
         alert("Could not parse input. Please enter details manually.");
       }
@@ -83,10 +87,27 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({ isOpen, onClose, onSav
     }
   };
 
+  const validate = () => {
+    const newErrors: { [key: string]: string | null } = {};
+    if (!description.trim()) {
+      newErrors.description = 'Description is required.';
+    }
+    if (!amount || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) {
+      newErrors.amount = 'Please enter a valid positive amount.';
+    }
+    if (!date) {
+      newErrors.date = 'Date is required.';
+    }
+    if (!categoryId) {
+      newErrors.categoryId = 'Please select a category.';
+    }
+    setErrors(newErrors);
+    return Object.values(newErrors).every(error => error === null);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!amount || !description || !date || !categoryId) {
-      alert("Please fill all fields");
+    if (!validate()) {
       return;
     }
     onSave({
@@ -100,7 +121,7 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({ isOpen, onClose, onSav
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={expense ? 'Edit Expense' : 'Add Expense'}>
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} noValidate>
         <div className="p-6 space-y-4">
             <div className="p-4 border border-primary-200 dark:border-primary-800 bg-primary-50 dark:bg-primary-900/20 rounded-lg">
                 <label className="block text-sm font-bold text-primary-800 dark:text-primary-200 mb-2">Smart Add with AI</label>
@@ -125,44 +146,40 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({ isOpen, onClose, onSav
                  <p className="text-xs text-primary-600 dark:text-primary-400 mt-2">Let AI fill out the form for you!</p>
             </div>
 
-          <FormField label="Description">
+          <FormField label="Description" error={errors.description}>
             <input
               type="text"
               value={description}
               onChange={e => setDescription(e.target.value)}
-              className="w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-              required
+              className={`w-full bg-white dark:bg-gray-700 border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 ${errors.description ? 'border-red-500' : 'border-gray-300 dark:border-gray-600 focus:border-primary-500'}`}
             />
           </FormField>
           
           <div className="grid grid-cols-2 gap-4">
-              <FormField label="Amount ($)">
+              <FormField label="Amount ($)" error={errors.amount}>
                 <input
                   type="number"
                   value={amount}
                   onChange={e => setAmount(e.target.value)}
-                  className="w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                  required
+                  className={`w-full bg-white dark:bg-gray-700 border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 ${errors.amount ? 'border-red-500' : 'border-gray-300 dark:border-gray-600 focus:border-primary-500'}`}
                   step="0.01"
                 />
               </FormField>
-              <FormField label="Date">
+              <FormField label="Date" error={errors.date}>
                 <input
                   type="date"
                   value={date}
                   onChange={e => setDate(e.target.value)}
-                  className="w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                  required
+                  className={`w-full bg-white dark:bg-gray-700 border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 ${errors.date ? 'border-red-500' : 'border-gray-300 dark:border-gray-600 focus:border-primary-500'}`}
                 />
               </FormField>
           </div>
           
-          <FormField label="Category">
+          <FormField label="Category" error={errors.categoryId}>
             <select
               value={categoryId}
               onChange={e => setCategoryId(e.target.value)}
-              className="w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-              required
+              className={`w-full bg-white dark:bg-gray-700 border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 ${errors.categoryId ? 'border-red-500' : 'border-gray-300 dark:border-gray-600 focus:border-primary-500'}`}
             >
               {categories.map(cat => (
                 <option key={cat.id} value={cat.id}>{cat.icon} {cat.name}</option>
