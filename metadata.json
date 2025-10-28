@@ -1,0 +1,5 @@
+{
+  "name": "AI-Powered Offline Expense Tracker",
+  "description": "An offline-first expense tracking application that uses AI to intelligently categorize spending. All data is saved locally in your browser, ensuring functionality even without an internet connection.",
+  "requestFramePermissions": []
+}
