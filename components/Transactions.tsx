@@ -94,7 +94,7 @@ const Transactions: React.FC<TransactionsProps> = ({ expenses, categories, onEdi
         </div>
       </div>
 
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
           <thead className="bg-gray-50 dark:bg-gray-700">
             <tr>
@@ -106,30 +106,37 @@ const Transactions: React.FC<TransactionsProps> = ({ expenses, categories, onEdi
             </tr>
           </thead>
           <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-            {filteredExpenses.map(expense => {
-              const category = categoryMap.get(expense.categoryId);
-              return (
-                <tr key={expense.id}>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900 dark:text-white">{expense.description}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full" style={{backgroundColor: category?.color + '20', color: category?.color}}>
-                      {category?.icon} {category?.name || 'Uncategorized'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{new Date(expense.date).toLocaleDateString()}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900 dark:text-white">${expense.amount.toFixed(2)}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button onClick={() => onEdit(expense)} className="text-primary-600 hover:text-primary-900 dark:text-primary-400 dark:hover:text-primary-200 mr-4"><EditIcon /></button>
-                    <button onClick={() => onDelete(expense.id)} className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-200"><DeleteIcon /></button>
-                  </td>
+            {filteredExpenses.length > 0 ? (
+                filteredExpenses.map(expense => {
+                  const category = categoryMap.get(expense.categoryId);
+                  return (
+                    <tr key={expense.id}>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-medium text-gray-900 dark:text-white">{expense.description}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full" style={{backgroundColor: category?.color + '20', color: category?.color}}>
+                          {category?.icon} {category?.name || 'Uncategorized'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{new Date(expense.date).toLocaleDateString()}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900 dark:text-white">${expense.amount.toFixed(2)}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <button onClick={() => onEdit(expense)} className="text-primary-600 hover:text-primary-900 dark:text-primary-400 dark:hover:text-primary-200 mr-4"><EditIcon /></button>
+                        <button onClick={() => onDelete(expense.id)} className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-200"><DeleteIcon /></button>
+                      </td>
+                    </tr>
+                  );
+                })
+            ) : (
+                <tr>
+                    <td colSpan={5} className="text-center py-8 text-gray-500 dark:text-gray-400">
+                        No transactions match your filters.
+                    </td>
                 </tr>
-              );
-            })}
+            )}
           </tbody>
         </table>
-        {filteredExpenses.length === 0 && <p className="text-center py-8 text-gray-500 dark:text-gray-400">No transactions match your filters.</p>}
       </div>
     </div>
   );

@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useDataStore } from './hooks/useDataStore';
 import Dashboard from './components/Dashboard';
 import Transactions from './components/Transactions';
@@ -7,7 +7,7 @@ import IncomeList from './components/Income';
 import Categories from './components/Categories';
 import { TransactionForm } from './components/ExpenseForm';
 import type { Expense, Income, Category, Transaction } from './types';
-import { AddIcon, CategoriesIcon, DashboardIcon, TransactionsIcon, MoonIcon, SunIcon, IncomeIcon } from './components/icons';
+import { AddIcon, CategoriesIcon, DashboardIcon, TransactionsIcon, MoonIcon, SunIcon, IncomeIcon, MenuIcon } from './components/icons';
 
 type View = 'dashboard' | 'transactions' | 'income' | 'categories';
 
@@ -23,12 +23,47 @@ const NavItem: React.FC<{ currentView: View; viewName: View; label: string; icon
     </li>
 );
 
+const Sidebar: React.FC<{
+  currentView: View;
+  onViewChange: (view: View) => void;
+  isOnline: boolean;
+  isDarkMode: boolean;
+  onToggleDarkMode: () => void;
+}> = ({ currentView, onViewChange, isOnline, isDarkMode, onToggleDarkMode }) => (
+    <div className="p-4 flex flex-col justify-between h-full">
+        <div>
+            <div className="flex items-center mb-8">
+                <div className="p-2 bg-primary-500 rounded-full">
+                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v.01"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 18h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                </div>
+                <h1 className="ml-3 text-2xl font-bold text-gray-800 dark:text-white">AI Tracker</h1>
+            </div>
+            <ul>
+                <NavItem currentView={currentView} viewName="dashboard" label="Dashboard" icon={<DashboardIcon />} onClick={onViewChange} />
+                <NavItem currentView={currentView} viewName="transactions" label="Expenses" icon={<TransactionsIcon />} onClick={onViewChange} />
+                <NavItem currentView={currentView} viewName="income" label="Income" icon={<IncomeIcon />} onClick={onViewChange} />
+                <NavItem currentView={currentView} viewName="categories" label="Categories" icon={<CategoriesIcon />} onClick={onViewChange} />
+            </ul>
+        </div>
+        <div className="hidden lg:flex items-center justify-between">
+            <div className={`px-3 py-1 text-sm font-semibold rounded-full ${isOnline ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                {isOnline ? 'Online' : 'Offline'}
+            </div>
+            <button onClick={onToggleDarkMode} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+                {isDarkMode ? <SunIcon /> : <MoonIcon />}
+            </button>
+        </div>
+    </div>
+);
+
+
 const App: React.FC = () => {
   const [view, setView] = useState<View>('dashboard');
   const [isTransactionModalOpen, setTransactionModalOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [isMobileNavOpen, setMobileNavOpen] = useState(false);
 
   const {
     expenses,
@@ -76,6 +111,11 @@ const App: React.FC = () => {
       localStorage.theme = 'dark';
     }
     setIsDarkMode(!isDarkMode);
+  };
+
+  const handleViewChange = (newView: View) => {
+    setView(newView);
+    setMobileNavOpen(false);
   };
 
   const openAddTransactionModal = () => {
@@ -133,53 +173,59 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="flex h-screen bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200">
-      <nav className="w-64 bg-white dark:bg-gray-800 shadow-lg p-4 flex flex-col justify-between">
-        <div>
-          <div className="flex items-center mb-8">
-            <div className="p-2 bg-primary-500 rounded-full">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v.01"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 18h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200">
+        <div className="flex">
+            <aside className={`fixed inset-y-0 left-0 z-30 w-64 bg-white dark:bg-gray-800 shadow-lg transform ${isMobileNavOpen ? 'translate-x-0' : '-translate-x-full'} transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0`}>
+                <Sidebar
+                    currentView={view}
+                    onViewChange={handleViewChange}
+                    isOnline={isOnline}
+                    isDarkMode={isDarkMode}
+                    onToggleDarkMode={toggleDarkMode}
+                />
+            </aside>
+            
+            {isMobileNavOpen && <div className="fixed inset-0 z-20 bg-black opacity-50 lg:hidden" onClick={() => setMobileNavOpen(false)}></div>}
+            
+            <div className="flex-1 flex flex-col min-w-0">
+                <header className="lg:hidden sticky top-0 z-10 flex items-center justify-between p-4 bg-white dark:bg-gray-800 shadow-md">
+                    <button onClick={() => setMobileNavOpen(true)} className="text-gray-600 dark:text-gray-300 p-2 -ml-2">
+                        <MenuIcon />
+                    </button>
+                    <h1 className="text-xl font-bold capitalize">{view}</h1>
+                    <div className="flex items-center space-x-2">
+                        <div className={`hidden sm:block px-2 py-0.5 text-xs font-semibold rounded-full ${isOnline ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                            {isOnline ? 'Online' : 'Offline'}
+                        </div>
+                        <button onClick={toggleDarkMode} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
+                            {isDarkMode ? <SunIcon /> : <MoonIcon />}
+                        </button>
+                    </div>
+                </header>
+
+                <main className="flex-1 p-4 sm:p-6">
+                    {renderView()}
+                </main>
             </div>
-            <h1 className="ml-3 text-2xl font-bold text-gray-800 dark:text-white">AI Tracker</h1>
-          </div>
-          <ul>
-            <NavItem currentView={view} viewName="dashboard" label="Dashboard" icon={<DashboardIcon />} onClick={setView} />
-            <NavItem currentView={view} viewName="transactions" label="Expenses" icon={<TransactionsIcon />} onClick={setView} />
-            <NavItem currentView={view} viewName="income" label="Income" icon={<IncomeIcon />} onClick={setView} />
-            <NavItem currentView={view} viewName="categories" label="Categories" icon={<CategoriesIcon />} onClick={setView} />
-          </ul>
         </div>
-        <div className="flex items-center justify-between">
-            <div className={`px-3 py-1 text-sm font-semibold rounded-full ${isOnline ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                {isOnline ? 'Online' : 'Offline'}
-            </div>
-            <button onClick={toggleDarkMode} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
-                {isDarkMode ? <SunIcon /> : <MoonIcon />}
-            </button>
-        </div>
-      </nav>
 
-      <main className="flex-1 p-6 overflow-auto">
-        {renderView()}
-      </main>
+        <button
+            onClick={openAddTransactionModal}
+            className="fixed bottom-8 right-8 bg-primary-600 hover:bg-primary-700 text-white rounded-full p-4 shadow-lg transition-transform transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+            aria-label="Add Transaction"
+        >
+            <AddIcon />
+        </button>
 
-      <button
-        onClick={openAddTransactionModal}
-        className="fixed bottom-8 right-8 bg-primary-600 hover:bg-primary-700 text-white rounded-full p-4 shadow-lg transition-transform transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-        aria-label="Add Transaction"
-      >
-        <AddIcon />
-      </button>
-
-      {isTransactionModalOpen && (
-        <TransactionForm
-          isOpen={isTransactionModalOpen}
-          onClose={() => setTransactionModalOpen(false)}
-          onSave={handleTransactionFormSave}
-          transaction={editingTransaction}
-          categories={categories}
-        />
-      )}
+        {isTransactionModalOpen && (
+            <TransactionForm
+            isOpen={isTransactionModalOpen}
+            onClose={() => setTransactionModalOpen(false)}
+            onSave={handleTransactionFormSave}
+            transaction={editingTransaction}
+            categories={categories}
+            />
+        )}
     </div>
   );
 };

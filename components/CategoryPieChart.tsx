@@ -26,10 +26,9 @@ const CustomTooltip = ({ active, payload }: any) => {
 };
 
 export const CategoryPieChart: React.FC<CategoryPieChartProps> = ({ expenses, categories }) => {
-  // FIX: Explicitly type the Map to ensure `get` returns a typed value (`Category | undefined`) instead of `unknown`, which resolves all downstream type inference errors.
   const categoryMap = new Map<string, Category>(categories.map(c => [c.id, c]));
 
-  // FIX: Cast the initial value of reduce to `Record<string, ChartDataItem>` to correctly type
+  // Fix: Cast the initial value of reduce to `Record<string, ChartDataItem>` to correctly type
   // the accumulator `acc` and the resulting `data` object. This resolves downstream type
   // errors when accessing properties on chart data.
   const data = expenses.reduce((acc, expense) => {
